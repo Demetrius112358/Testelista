@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Pro + Relatório</title>
+    <style>
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background: white;
+            padding: 1.2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 { text-align: center; color: #333; margin-bottom: 15px; }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        #itemName { grid-column: span 2; width: 100%; }
+
+        input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .btn-main {
+            grid-column: span 2;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #add-btn { background-color: #28a745; color: white; }
+        #report-btn { 
+            background-color: #34495e; 
+            color: white; 
+            margin-top: 10px; 
+            width: 100%;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+
+        tr {
+            display: flex;
+            flex-direction: column;
+            padding: 15px 0;
+            border-bottom: 2px solid #eee;
+            position: relative;
+        }
+
+        td { display: block; padding: 2px 0; }
+        td::before { content: attr(data-label); font-weight: bold; color: #666; margin-right: 5px; }
+
+        .item-name { font-size: 1.1rem; font-weight: bold; color: #2c3e50; }
+        .item-name::before { content: ""; }
+
+        .actions { display: flex; gap: 8px; margin-top: 10px; }
+
+        .btn-action {
+            flex: 1;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .edit-btn { background-color: #f1c40f; color: #333; }
+        .delete-btn { background-color: #e74c3c; }
+
+        .footer-total {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #28a745;
+        }
+
+        @media (min-width: 481px) {
+            tr { flex-direction: row; align-items: center; }
+            td { flex: 1; }
+            td::before { content: ""; }
+            .actions { flex: 0 0 140px; }
+            .input-grid { grid-template-columns: 2fr 1fr 1fr auto; }
+            #itemName { grid-column: span 1; }
+            #add-btn { grid-column: span 1; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🛒 Lista de Compras</h2>
+    
+    <div class="input-grid">
+        <input type="text" id="itemName" placeholder="Produto">
+        <input type="number" id="itemQty" placeholder="Qtd" value="1">
+        <input type="number" id="itemPrice" placeholder="R$ Unit" step="0.01">
+        <button id="add-btn" class="btn-main" onclick="addItem()">Adicionar</button>
+    </div>
+
+    <table>
+        <tbody id="listBody"></tbody>
+    </table>
+
+    <div class="footer-total">
+        Total: <span id="grand-total">R$ 0,00</span>
+    </div>
+
+    <button id="report-btn" class="btn-main" onclick="generateReport()">Gerar Relatório Geral</button>
+</div>
+
+<script>
+    let totalGeral = 0;
+    let items = []; // Array para armazenar os dados e facilitar o relatório
+
+    function addItem() {
+        const nameInput = document.getElementById('itemName');
+        const qtyInput = document.getElementById('itemQty');
+        const priceInput = document.getElementById('itemPrice');
+
+        const name = nameInput.value.trim();
+        const qty = parseFloat(qtyInput.value);
+        const price = parseFloat(priceInput.value);
+
+        if (!name || isNaN(qty) || isNaN(price)) {
+            alert("Preencha todos os campos corretamente!");
+            return;
+        }
+
+        const itemTotal = qty * price;
+        const itemObj = { id: Date.now(), name, qty, price, total: itemTotal };
+        items.push(itemObj);
+
+        renderList();
+        
+        nameInput.value = '';
+        priceInput.value = '';
+        qtyInput.value = '1';
+        nameInput.focus();
+    }
+
+    function renderList() {
+        const listBody = document.getElementById('listBody');
+        listBody.innerHTML = "";
+        totalGeral = 0;
+
+        items.forEach(item => {
+            totalGeral += item.total;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="item-name">${item.name}</td>
+                <td data-label="Qtd:">${item.qty}</td>
+                <td data-label="Unit:">R$ ${item.price.toFixed(2)}</td>
+                <td data-label="Total:">R$ ${item.total.toFixed(2)}</td>
+                <td class="actions">
+                    <button class="btn-action edit-btn" onclick="editItem(${item.id})">Editar</button>
+                    <button class="btn-action delete-btn" onclick="removeItem(${item.id})">Sair</button>
+                </td>
+            `;
+            listBody.appendChild(row);
+        });
+
+        document.getElementById('grand-total').innerText = `R$ ${totalGeral.toFixed(2)}`;
+    }
+
+    function removeItem(id) {
+        items = items.filter(item => item.id !== id);
+        renderList();
+    }
+
+    function editItem(id) {
+        const item = items.find(i => i.id === id);
+        if (item) {
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemQty').value = item.qty;
+            document.getElementById('itemPrice').value = item.price;
+            
+            removeItem(id); // Remove para re-adicionar editado
+            
+            const addBtn = document.getElementById('add-btn');
+            addBtn.innerText = "Confirmar Edição";
+            addBtn.style.backgroundColor = "#f1c40f";
+            addBtn.style.color = "#333";
+
+            // Volta o botão ao normal após o clique
+            const resetBtn = () => {
+                addBtn.innerText = "Adicionar";
+                addBtn.style.backgroundColor = "#28a745";
+                addBtn.style.color = "white";
+                addBtn.removeEventListener('click', resetBtn);
+            };
+            addBtn.addEventListener('click', resetBtn);
+        }
+    }
+
+    function generateReport() {
+        if (items.length === 0) {
+            alert("A lista está vazia!");
+            return;
+        }
+
+        const date = new Date().toLocaleDateString('pt-BR');
+        let reportWindow = window.open('', '_blank');
+        
+        let tableRows = items.map(item => `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.qty}</td>
+                <td>R$ ${item.price.toFixed(2)}</td>
+                <td>R$ ${item.total.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        reportWindow.document.write(`
+            <html>
+            <head>
+                <title>Relatório de Compras</title>
+                <style>
+                    body { font-family: sans-serif; padding: 20px; }
+                    h1 { text-align: center; color: #333; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .total { font-size: 1.5rem; font-weight: bold; text-align: right; margin-top: 20px; color: #28a745; }
+                    .header-info { text-align: center; color: #666; }
+                    @media print { .no-print { display: none; } }
+                </style>
+            </head>
+            <body>
+                <h1>Relatório de Compras</h1>
+                <p class="header-info">Data: ${date}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Quantidade</th>
+                            <th>Vlr. Unitário</th>
+                            <th>Vlr. Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                <div class="total">Total Geral: R$ ${totalGeral.toFixed(2)}</div>
+                <br>
+                <button class="no-print" onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">Imprimir / Salvar PDF</button>
+            </body>
+            </html>
+        `);
+        reportWindow.document.close();
+    }
+</script>
+
+</body>
+</html>
